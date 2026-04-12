@@ -2,7 +2,8 @@ pipeline {
     agent any
     
     environment {
-        PYTHON_VERSION = '3.9'
+        PYTHON_VERSION = '3.13'
+        GITHUB_REPO = 'https://github.com/Taneshbad/Jenkins_project2.git'
     }
     
     options {
@@ -14,58 +15,85 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
+                echo "=========================================="
                 echo "Checking out code from GitHub..."
-                checkout scm
+                echo "Repository: https://github.com/Taneshbad/Jenkins_project2.git"
+                echo "=========================================="
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[url: 'https://github.com/Taneshbad/Jenkins_project2.git']]
+                ])
                 bat 'git log --oneline -1'
             }
         }
         
         stage('Setup Python') {
             steps {
+                echo "=========================================="
                 echo "Setting up Python environment..."
+                echo "=========================================="
                 bat 'python --version'
-                bat 'pip3 --version'
+                bat 'pip --version'
             }
         }
         
         stage('Install Dependencies') {
             steps {
+                echo "=========================================="
                 echo "Installing Python dependencies..."
-                bat 'pip3 install -r requirements.txt'
+                echo "=========================================="
+                bat 'pip install -r requirements.txt'
             }
         }
         
+        stage('Code Quality Check') {
+            steps {
+                echo "=========================================="
+                echo "Running code quality checks..."
+                echo "=========================================="
+                bat 'flake8 app.py test_app.py || exit 0'
+            }
+        }
         
         stage('Run Application') {
             steps {
+                echo "=========================================="
                 echo "Running the application..."
+                echo "=========================================="
                 bat 'python app.py'
             }
         }
         
         stage('Run Tests') {
             steps {
+                echo "=========================================="
                 echo "Running unit tests..."
-                bat 'python -m pytest test_app.py -v --tb=batort'
+                echo "=========================================="
+                bat 'python -m pytest test_app.py -v --tb=short'
             }
         }
         
         stage('Test Coverage') {
             steps {
+                echo "=========================================="
                 echo "Generating test coverage report..."
-                bat 'python -m pytest test_app.py --cov=app --cov-report=term-missing || true'
+                echo "=========================================="
+                bat 'python -m pytest test_app.py --cov=app --cov-report=term-missing || exit 0'
             }
         }
         
         stage('Build Artifacts') {
             steps {
+                echo "=========================================="
                 echo "Creating build artifacts..."
+                echo "=========================================="
                 bat '''
-                    mkdir -p dist
-                    cp app.py dist/
-                    cp test_app.py dist/
-                    cp requirements.txt dist/
-                    echo "Artifacts ready in dist/ directory"
+                    if not exist "dist" mkdir dist
+                    copy app.py dist\
+                    copy test_app.py dist\
+                    copy requirements.txt dist\
+                    echo Artifacts ready in dist directory
                 '''
             }
         }
@@ -73,14 +101,22 @@ pipeline {
     
     post {
         always {
+            echo "=========================================="
             echo "Cleaning up workspace..."
-            cleanWs()
+            echo "=========================================="
+            deleteDir()
         }
         success {
-            echo "Pipeline executed successfully!"
+            echo "=========================================="
+            echo "BUILD SUCCESSFUL!"
+            echo "Repository: https://github.com/Taneshbad/Jenkins_project2.git"
+            echo "=========================================="
         }
         failure {
-            echo "Pipeline failed! Check logs above."
+            echo "=========================================="
+            echo "BUILD FAILED - Check logs above"
+            echo "Repository: https://github.com/Taneshbad/Jenkins_project2.git"
+            echo "=========================================="
         }
     }
 }
